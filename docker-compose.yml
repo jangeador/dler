@@ -1,0 +1,33 @@
+version: '2.1'
+services:
+  sabnzbd:
+    container_name: sabnzbd
+    image: linuxserver/sabnzbd
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./config/sabnzbd:/config
+      - ./data/completed:/downloads
+      - ./data/downloading:/incomplete-downloads
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr
+    restart: unless-stopped
+    depends_on:
+      - sabnzbd
+    network_mode: host
+    volumes:
+      - ./config/sonarr:/config
+      - ./data/tv:/tv
+      - ./data/completed:/downloads
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr
+    restart: unless-stopped
+    depends_on:
+      - sabnzbd
+    network_mode: host
+    volumes:
+      - ./config/radarr:/config
+      - ./data/movies:/movies
+      - ./data/completed:/downloads
