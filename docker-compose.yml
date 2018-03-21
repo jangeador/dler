@@ -1,33 +1,94 @@
-version: '2.1'
+version: '3.3'
 services:
+  headphones:
+    container_name: headphones
+    image: linuxserver/headphones
+    restart: unless-stopped
+    networks:
+      - default
+    env_file:                                                 
+      - .env  
+    volumes:
+      - ~/.config/headphones:/config
+      - /data/media/completed:/downloads
+      - /data/media/music:/music
+    ports:
+      - 8181:8181
+  plex:
+    container_name: plex
+    image: linuxserver/plex
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - .env
+    volumes:
+      - /data/config/plex:/config
+      - /data/media/tv:/data/tvshows
+      - /hd2/media/tv:/data/tvshows2
+      - /data/media/movies:/data/movies
+      - /hd1/media/movies:/data/movies1
+      - /hd2/media/movies:/data/movies2
+      - /data/media/transcode:/transcode
+  deluge:
+    container_name: deluge
+    image: linuxserver/deluge
+    restart: unless-stopped
+    network_mode: host
+    env_file:                                                 
+      - .env  
+    volumes:
+      - ~/.config/deluge:/config
+      - /data/media/torrents:/downloads
   sabnzbd:
     container_name: sabnzbd
     image: linuxserver/sabnzbd
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - default    
+    env_file:
+      - .env
     volumes:
-      - ./config/sabnzbd:/config
-      - ./data/completed:/downloads
-      - ./data/downloading:/incomplete-downloads
+      - ~/.config/sabnzbd:/config
+      - /data/media/completed:/downloads
+      - /data/media/downloading:/incomplete-downloads
+    ports:
+      - 8080:8080
+      - 9090:9090
   sonarr:
     container_name: sonarr
     image: linuxserver/sonarr
     restart: unless-stopped
     depends_on:
       - sabnzbd
-    network_mode: host
+    env_file:
+      - .env
+    networks:
+      - default
     volumes:
-      - ./config/sonarr:/config
-      - ./data/tv:/tv
-      - ./data/completed:/downloads
+      - ~/.config/sonarr:/config
+      - /data/media/tv:/tv
+      - /hd2/media/tv:/tv2
+      - /data/media/completed:/downloads
+    ports:
+      - 8989:8989
   radarr:
     container_name: radarr
     image: linuxserver/radarr
     restart: unless-stopped
     depends_on:
       - sabnzbd
-    network_mode: host
+    env_file:
+      - .env
+    networks:
+      - default
     volumes:
-      - ./config/radarr:/config
-      - ./data/movies:/movies
-      - ./data/completed:/downloads
+      - ~/.config/radarr:/config
+      - /data/media/movies:/movies
+      - /hd1/media/movies:/movies1
+      - /hd2/media/movies:/movies2
+      - /data/media/completed:/downloads
+    ports:
+      - 7878:7878
+
+networks:
+  default:
