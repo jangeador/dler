@@ -6,8 +6,8 @@ services:
     restart: unless-stopped
     networks:
       - default
-    env_file:                                                 
-      - .env  
+    env_file:
+      - .env
     volumes:
       - ~/.config/headphones:/config
       - /data/media/completed:/downloads
@@ -36,83 +36,33 @@ services:
     image: linuxserver/deluge
     restart: unless-stopped
     network_mode: host
-    env_file:                                                 
-      - .env  
+    env_file:
+      - .env
     volumes:
       - ~/.config/deluge:/config
       - /data/media/torrents:/downloads
       - /data/media/movies:/movies
-  vpn:
-    image: dperson/openvpn-client
-    container_name: ovpn_client
-    # cap_add, security_opt, and volume required for the image to function
-    cap_add:
-      - net_admin
-    env_file:
-      - .env
-    networks:
-      - default
-    read_only: true
-    tmpfs:
-      - /tmp
-    restart: unless-stopped
-    security_opt:
-      - label:disable
-    stdin_open: true
-    tty: true
-    volumes:
-      - /dev/net:/dev/net:z
-      - ~/.config/vpn/torguard:/vpn
-    ports:
-      - 8080:8080
-      - 9090:9090
-      - 7878:7878
   sabnzbd:
     container_name: sabnzbd
     image: linuxserver/sabnzbd
-    depends_on:
-      - vpn
     restart: unless-stopped
-    network_mode: "service:vpn"
+    networks:
+      - default
     env_file:
       - .env
     volumes:
       - ~/.config/sabnzbd:/config
       - /data/media/completed:/downloads
       - /data/media/downloading:/incomplete-downloads
-  web:                                                        
-    image: dperson/nginx
-    container_name: web_vpn_proxy                                      
-    depends_on:                                               
-      - sabnzbd                                              
-    env_file:                                                 
-      - .env                                                  
-    links:                                                    
-      - vpn:sabnzbd
-      - vpn:radarr                                         
-    networks:                                                 
-      - default                                               
-    ports:                                                    
-      - "80:80"                                               
-      - "443:443"                                             
-    read_only: true                                           
-    tmpfs:                                                    
-      - /run                                                  
-      - /tmp                                                  
-      - /var/cache/nginx                                      
-    restart: unless-stopped                                   
-    stdin_open: true                                          
-    tty: true                                                 
-    command: -w "http://sabnzbd:8080;/" -w "http://radarr:7878;/radarr" 
-
+    ports:
+      - 8080:8080
+      - 9090:9090
   sonarr:
     container_name: sonarr
     image: linuxserver/sonarr
     restart: unless-stopped
     depends_on:
       - sabnzbd
-    links:
-      - sabnzbd:sab
     env_file:
       - .env
     networks:
@@ -132,17 +82,18 @@ services:
       - sabnzbd
     env_file:
       - .env
-#    networks:
-#      - default
-    network_mode: "service:vpn"
+    networks:
+      - default
+    networks:
+      - default
     volumes:
       - ~/.config/radarr:/config
       - /data/media/movies:/movies
       - /hd1/media/movies:/movies1
       - /hd2/media/movies:/movies2
       - /data/media/completed:/downloads
-#    ports:
-#      - 7878:7878
-
+    ports:
+      - 7878:7878
 networks:
   default:
+
