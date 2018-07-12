@@ -1,19 +1,5 @@
 version: '3.3'
 services:
-  headphones:
-    container_name: headphones
-    image: linuxserver/headphones
-    restart: unless-stopped
-    networks:
-      - default
-    env_file:
-      - .env
-    volumes:
-      - ~/.config/headphones:/config
-      - /data/media/completed:/downloads
-      - /data/media/music:/music
-    ports:
-      - 8181:8181
   plex:
     container_name: plex
     image: linuxserver/plex
@@ -27,6 +13,8 @@ services:
       - /hd1/media/tv:/data/tvshows1
       - /hd2/media/tv:/data/tvshows2
       - /data/media/movies:/data/movies
+      - /data/media/new_movies:/data/new_movies
+      - /hd4/media/top_250:/data/top_250
       - /hd1/media/movies:/data/movies1
       - /hd2/media/movies:/data/movies2
       - /hd1/media/video:/data/other_video
@@ -42,38 +30,74 @@ services:
       - ~/.config/deluge:/config
       - /data/media/torrents:/downloads
       - /data/media/movies:/movies
+  vpn:
+    image: dperson/openvpn-client
+    cap_add:
+      - net_admin
+    env_file:
+      - .env
+    networks:
+      - default
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+    security_opt:
+      - label:disable
+    stdin_open: true
+    tty: true
+    volumes:
+      - /dev/net:/dev/net:z
+      - ~/.config/vpn/torguard:/vpn
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+      - "7878:7878"
+      - "8181:8181"
+      - "8989:8989"
+      - "9117:9117"
+      - "2202:2202"
+      - "2203:2203"
+      - "8090:8090"
+      - "3128:3128"
   sabnzbd:
     container_name: sabnzbd
     image: linuxserver/sabnzbd
     restart: unless-stopped
-    networks:
-      - default
+    depends_on:
+      - vpn
+    network_mode: "service:vpn"
     env_file:
       - .env
     volumes:
       - ~/.config/sabnzbd:/config
       - /data/media/completed:/downloads
       - /data/media/downloading:/incomplete-downloads
-    ports:
-      - 8080:8080
-      - 9090:9090
+  squid:
+    container_name: squid
+    image: sameersbn/squid:3.3.8-23
+    restart: unless-stopped
+    depends_on:
+      - vpn
+    network_mode: "service:vpn"
+    env_file:
+      - .env
+    volumes:
+      - /srv/docker/squid/cache:/var/spool/squid
   sonarr:
     container_name: sonarr
     image: linuxserver/sonarr
     restart: unless-stopped
     depends_on:
       - sabnzbd
+    network_mode: "service:vpn"
     env_file:
       - .env
-    networks:
-      - default
     volumes:
       - ~/.config/sonarr:/config
       - /data/media/tv:/tv
       - /hd2/media/tv:/tv2
       - /data/media/completed:/downloads
-    ports:
-      - 8989:8989
   radarr:
     container_name: radarr
     image: linuxserver/radarr
@@ -82,18 +106,88 @@ services:
       - sabnzbd
     env_file:
       - .env
-    networks:
-      - default
-    networks:
-      - default
+    network_mode: "service:vpn"
     volumes:
       - ~/.config/radarr:/config
       - /data/media/movies:/movies
+      - /data/media/new_movies:/new_movies
+      - /hd4/media/top_250:/top_250
       - /hd1/media/movies:/movies1
       - /hd2/media/movies:/movies2
       - /data/media/completed:/downloads
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett
+    restart: unless-stopped
+    depends_on:
+      - sabnzbd
+    network_mode: "service:vpn"
+    env_file:
+      - .env
+    volumes:
+      - ~/.config/jackett:/config
+      - /data/media/blackhole:/downloads
+  headphones:
+    container_name: headphones
+    image: linuxserver/headphones
+    restart: unless-stopped
+    network_mode: "service:vpn"
+    env_file:
+      - .env
+    volumes:
+      - ~/.config/headphones:/config
+      - /data/media/completed:/downloads
+      - /data/media/music:/music
+  ubooquity:
+    container_name: ubooquity
+    image: linuxserver/ubooquity
+    restart: unless-stopped
+    network_mode: "service:vpn"
+    env_file:
+      - .env
+    volumes:
+      - ~/.config/ubooquity:/config
+      - /data/media/books/books:/books
+      - /data/media/books/comics:/comics
+      - /data/media/books/raw:/raw
+  mylar:
+    container_name: mylar
+    image: linuxserver/mylar
+    restart: unless-stopped
+    network_mode: "service:vpn"
+    env_file:
+      - .env
+    volumes:
+      - ~/.config/mylar:/config
+      - /data/media/completed:/downloads
+      - /data/media/books/comics:/comics
+  kodi:
+    container_name: kodi
+    image: linuxserver/kodi-headless
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ~/.config/kodi:/config/.kodi
+    networks:
+      - default
     ports:
-      - 7878:7878
+      - "8082:8082"
+      - "9092:9092"
+      - "9777:9777/udp"  
+  resilio:
+    container_name: resilio
+    image: linuxserver/resilio-sync
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ~/.config/resilio:/config
+      - /data/media:/sync
+      - /data/media/completed:/downloads
+    ports:
+      - "8888:8888"
+      - "55555:55555"
 networks:
   default:
 
